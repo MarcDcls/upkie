@@ -58,6 +58,7 @@ exclude = [
     "examples/",
     "logs/",
     "mpc_balancer/",
+    "rl_policies/",
     "spines/",
     "tools/",
     "upkie/cpp",
@@ -70,7 +71,7 @@ include = [
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64", "linux-aarch64", "osx-arm64"]
+platforms = ["linux-64", "linux-aarch64"]
 
 [tool.pixi.pypi-dependencies]
 upkie = { path = ".", editable = true }
@@ -136,6 +137,12 @@ qpmpc = ">=3.0.1,<4"
 [tool.pixi.feature.mpc-balancer.tasks]
 mpc-balancer = "python -m mpc_balancer"
 
+[tool.pixi.feature.rl-policies.dependencies]
+onnx = ">=1.0.0"
+
+[tool.pixi.feature.rl-policies.tasks]
+rl-policies = "python -m rl_policies"
+
 [tool.pixi.feature.pack.dependencies]
 gin-config = ">=0.5.0"
 meshcat-shapes = ">=0.3.0"
@@ -188,6 +195,7 @@ docs = { features = ["docs"], solve-group = "default" }
 genesis = { features = ["genesis"], solve-group = "genesis" }
 lint = { features = ["lint"], solve-group = "default" }
 mpc-balancer = { features = ["mpc-balancer"], solve-group = "mpc-balancer" }
+rl-policies = { features = ["rl-policies"], solve-group = "rl-policies" }
 pack = { features = ["pack"], solve-group = "default" }
 pybullet = { features = ["pybullet"], solve-group = "pybullet" }
 test-py310 = { features = ["py310", "test"], solve-group = "py310" }

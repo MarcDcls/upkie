@@ -84,13 +84,13 @@ void Joystick::read_event() {
           left_axis_.y() = normalized_value;
           break;
         case 2:
-          left_trigger_ = normalized_value;
-          break;
-        case 3:
           right_axis_.x() = normalized_value;
           break;
-        case 4:
+        case 3:
           right_axis_.y() = normalized_value;
+          break;
+        case 4:
+          left_trigger_ = normalized_value;
           break;
         case 5:
           right_trigger_ = normalized_value;

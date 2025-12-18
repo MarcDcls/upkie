@@ -141,8 +141,6 @@ class UpkieServos(UpkieEnv):
             `frequency`.
         \param max_gain_scale Maximum value for kp or kd gain scales.
         """
-        if not (0.0 < max_gain_scale < 10.0):
-            raise UpkieRuntimeError("Invalid value {max_gain_scale =}")
 
         # Initialize base class but override action/observation spaces
         super().__init__(

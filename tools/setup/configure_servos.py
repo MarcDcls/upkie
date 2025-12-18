@@ -94,11 +94,11 @@ def write_servo_configuration(servo_id: int):
 
 def configure_position_limits():
     for hip in (LEFT_HIP, RIGHT_HIP):
-        configure_servo(hip, "servopos.position_max", 0.2)
-        configure_servo(hip, "servopos.position_min", -0.2)
+        configure_servo(hip, "servopos.position_max", 3.05433)
+        configure_servo(hip, "servopos.position_min", -3.05433)
     for knee in (LEFT_KNEE, RIGHT_KNEE):
-        configure_servo(knee, "servopos.position_max", 0.4)
-        configure_servo(knee, "servopos.position_min", -0.4)
+        configure_servo(knee, "servopos.position_max", 2.70526)
+        configure_servo(knee, "servopos.position_min", -2.70526)
     for wheel in WHEEL_SERVOS:
         configure_servo(wheel, "servopos.position_max", "NaN")
         configure_servo(wheel, "servopos.position_min", "NaN")
@@ -106,9 +106,9 @@ def configure_position_limits():
 
 def configure_velocity_limits():
     for hip_or_knee in UPPER_LEG_SERVOS:
-        configure_servo(hip_or_knee, "servo.max_velocity", 2.0)
+        configure_servo(hip_or_knee, "servo.max_velocity", 8.0)
     for wheel in WHEEL_SERVOS:
-        configure_servo(wheel, "servo.max_velocity", 8.0)
+        configure_servo(wheel, "servo.max_velocity", 16.0)
 
 
 def configure_default_limits():
