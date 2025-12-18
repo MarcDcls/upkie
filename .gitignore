@@ -18,4 +18,5 @@ logs/**/*.zip
 sandbox/
 tools/bazel
 uv.lock
+pixi.lock
 wiki/
