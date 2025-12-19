@@ -106,9 +106,9 @@ def configure_position_limits():
 
 def configure_velocity_limits():
     for hip_or_knee in UPPER_LEG_SERVOS:
-        configure_servo(hip_or_knee, "servo.max_velocity", 8.0)
+        configure_servo(hip_or_knee, "servo.max_velocity", 2.0)
     for wheel in WHEEL_SERVOS:
-        configure_servo(wheel, "servo.max_velocity", 16.0)
+        configure_servo(wheel, "servo.max_velocity", 8.0)
 
 
 def configure_default_limits():

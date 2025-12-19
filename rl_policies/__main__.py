@@ -5,6 +5,7 @@
 # Copyright 2025 Marc Duclusaud
 
 import gymnasium as gym
+import numpy as np
 
 import upkie.envs
 from upkie.logging import logger
@@ -26,7 +27,7 @@ max_lin_vel = 1.0  # m/s
 max_ang_vel = 1.5  # rad/s
 
 def create_servo_target(
-    position: float = 0.0,
+    position: float = np.nan,
     velocity: float = 0.0,
     max_torque: float = 20.0,
 ) -> dict:
@@ -87,23 +88,19 @@ def run(
 
             print(f"Command: lin_vel={lin_vel:.2f} m/s, ang_vel={ang_vel:.2f} rad/s")
 
-            agent_action = [0, 0, 0, 0, 0, 0]
+            agent_action = [0, 0, 0, 0, lin_vel, lin_vel] # for testing purposes
             action = {
                 "left_hip": create_servo_target(position=agent_action[0], max_torque=16.0),
                 "left_knee": create_servo_target(position=agent_action[1], max_torque=16.0),
-                "left_wheel": create_servo_target(velocity=agent_action[2], max_torque=1.7),
-                "right_hip": create_servo_target(position=agent_action[3], max_torque=16.0),
-                "right_knee": create_servo_target(position=agent_action[4], max_torque=16.0),
+                "right_hip": create_servo_target(position=agent_action[2], max_torque=16.0),
+                "right_knee": create_servo_target(position=agent_action[3], max_torque=16.0),
+                "left_wheel": create_servo_target(velocity=agent_action[4], max_torque=1.7),
                 "right_wheel": create_servo_target(velocity=agent_action[5], max_torque=1.7),
             }
             
             for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
-                action[joint]["kp_scale"] = 1.0
-                action[joint]["kd_scale"] = 1.0
-
-            for joint in ["left_wheel", "right_wheel"]:
-                action[joint]["kp_scale"] = 1.0
-                action[joint]["kd_scale"] = 1.0
+                action[joint]["kp_scale"] = 8.0 * 2 * np.pi / qdd100["kp"]
+                action[joint]["kd_scale"] = 0.1 * 2 * np.pi / qdd100["kd"]
 
             _, _, terminated, truncated, info = env.step(action)
             spine_observation = info["spine_observation"]

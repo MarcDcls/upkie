@@ -139,6 +139,7 @@ mpc-balancer = "python -m mpc_balancer"
 
 [tool.pixi.feature.rl-policies.dependencies]
 onnx = ">=1.0.0"
+onnxruntime = ">=1.15.1"
 
 [tool.pixi.feature.rl-policies.tasks]
 rl-policies = "python -m rl_policies"
