@@ -109,6 +109,7 @@ def configure_velocity_limits():
         configure_servo(hip_or_knee, "servo.max_velocity", 2.0)
     for wheel in WHEEL_SERVOS:
         configure_servo(wheel, "servo.max_velocity", 8.0)
+        configure_servo(wheel, "servo.max_current_A", 16.0) # 17.91A based on https://mjbots.github.io/moteus/mpat.html?common.output=phase_current&common.analysis=max_current&axis.1.controller_cooling=none%2Cheatspreader%2C4030sink%2Cfan_5v%2Cfan_12v%2Cmax&axis.2.controller=moteus-c1%2Cmoteus-r4%2Cmoteus-n1%2Cmoteus-x1&plot.tab=table
 
 
 def configure_default_limits():
