@@ -1,5 +1,6 @@
 *.egg-info
 .pixi
+.vscode
 __pycache__
 activate.sh
 bazel-*
