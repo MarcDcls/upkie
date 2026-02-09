@@ -9,6 +9,10 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 import time
+from pathlib import Path
+
+from scipy.spatial.transform import Rotation as R
+
 
 import upkie.envs
 from upkie.logging import logger
@@ -29,9 +33,17 @@ mj5208 = {
 max_lin_vel = 1.0  # m/s
 max_ang_vel = 1.5  # rad/s
 
+command_max_change = 0.03 # Check if necessary when running on real robot
+
 wheel_action_scale = 100.0
 
-last_action = [0.0] * 6
+R_body_to_imu = np.array([
+    [0.0, -1.0, 0.0],
+    [0.0, 0.0, 1.0],
+    [-1.0, 0.0, 0.0],
+])
+
+last_wheel_positions = None
 
 
 def load_onnx_model(model_path: str) -> ort.InferenceSession:
@@ -72,7 +84,7 @@ def create_servo_target(
 def get_command_from_controller(spine_observation, deadzone: float = 0.1) -> tuple[float, float]:
     """
     Read joystick axes from spine sensors (SDL2).
-    Returns a tuple (lin_vel, ang_vel).
+    Returns a tuple (lin_vel, ang_vel).    
     """
     _, left_y = spine_observation["joystick"]["left_axis"]
     right_x, _ = spine_observation["joystick"]["right_axis"]
@@ -88,25 +100,43 @@ def get_command_from_controller(spine_observation, deadzone: float = 0.1) -> tup
     return max_lin_vel * lin, max_ang_vel * ang
 
 
-def get_inputs(last_action, command, spine_observation) -> dict:
+def get_inputs(last_action, command, spine_observation, frequency) -> dict:
     """Prepare observation dictionary for ONNX model inference."""
     obs = []
 
     # Joint positions
-    obs.append(spine_observation["servo"]["left_hip"]["position"])
+    obs.append(-spine_observation["servo"]["left_hip"]["position"])
     obs.append(spine_observation["servo"]["left_knee"]["position"])
-    obs.append(spine_observation["servo"]["right_hip"]["position"])
+    obs.append(-spine_observation["servo"]["right_hip"]["position"])
     obs.append(spine_observation["servo"]["right_knee"]["position"])
 
     # Wheel velocities
-    obs.append(spine_observation["servo"]["left_wheel"]["velocity"])
-    obs.append(spine_observation["servo"]["right_wheel"]["velocity"])
+    wheel_positions = np.array([spine_observation["servo"]["left_wheel"]["position"], 
+                                spine_observation["servo"]["right_wheel"]["position"]])
+    
+    global last_wheel_positions
+    wheel_velocities = [0.0, 0.0]
+    if last_wheel_positions is not None:
+        wheel_velocities = ((wheel_positions - last_wheel_positions) * frequency).tolist()
 
-    # IMU readings (quaternion)
-    obs.extend(spine_observation["imu"]["orientation"]) # Check order (w component first or last)
+    last_wheel_positions = wheel_positions
+    obs.extend(wheel_velocities)
+
+    # IMU readings (quaternion in (w, x, y, z) order)
+    imu_quat = spine_observation["imu"]["orientation"]
+    r_imu = R.from_quat([imu_quat[1], imu_quat[2], imu_quat[3], imu_quat[0]])
+    
+    R_mod_imu = r_imu.as_matrix() @ R_body_to_imu
+    euler_mod_imu = R.from_matrix(R_mod_imu).as_euler('xyz', degrees=True) * np.array([-1, 1, -1])
+    
+    r_mod_imu = R.from_euler('xyz', euler_mod_imu, degrees=True)
+    mod_imu_quat = r_mod_imu.as_quat()  # (x, y, z, w) order
+    obs.extend([mod_imu_quat[3], mod_imu_quat[0], mod_imu_quat[1], mod_imu_quat[2]])
 
     # Gyro readings
-    obs.extend(spine_observation["imu"]["angular_velocity"])
+    angular_velocity = np.array(spine_observation["imu"]["angular_velocity"])
+    corrected_angular_velocity = (angular_velocity @ R_body_to_imu) * np.array([-1.0, 1.0, -1.0])
+    obs.extend(corrected_angular_velocity.tolist())
 
     # Last action
     obs.extend(last_action)
@@ -115,12 +145,13 @@ def get_inputs(last_action, command, spine_observation) -> dict:
     obs.extend(command)
 
     # Debug
-    # print("joint positions:", obs[0:4])
-    # print("wheel velocities:", obs[4:6])
-    print("IMU quaternion:", obs[6:10])
-    print("gyro readings:", obs[10:13])
-    print("last action:", obs[13:19])
-    print("command:", obs[19:22])
+    # print(f"joint positions: {np.array(obs[0:4]).round(2)}")
+    # print(f"wheel velocities: {np.array(obs[4:6]).round(2)}")
+    # print(f"wheel position: {np.array(spine_observation['servo']['left_wheel']['position']):.2f}, {np.array(spine_observation['servo']['right_wheel']['position']):.2f}")
+    # print(f"IMU quaternion: {np.array(obs[6:10]).round(2)}")
+    # print(f"gyro readings: {np.array(obs[10:13]).round(2)}")
+    # print(f"last action: {np.array(obs[13:19]).round(2)}")
+    # print(f"command: {np.array(obs[19:22]).round(2)}")
     # print("------------------------")
 
     return {
@@ -132,10 +163,10 @@ def get_inputs(last_action, command, spine_observation) -> dict:
 def run(
     frequency: float = 50.0,
 ) -> None:
-    r"""!
+    """
     Run agent using a spine environment.
 
-    \param frequency Control loop frequency in Hz.
+    :param frequency: Control loop frequency in Hz.
     """
     upkie.envs.register()
 
@@ -143,52 +174,69 @@ def run(
         _, info = env.reset()
         spine_observation = info["spine_observation"]
 
-        ort_sess = load_onnx_model("agents/default.onnx")
+        model_path = Path(__file__).parent / "agents" / "default.onnx"
+        ort_sess = load_onnx_model(str(model_path))
 
-        # last_time = time.perf_counter()
+        last_action = [0.0] * 6
+        last_command = [0.0] * 3
+
+        agent_is_running = False
+
+        last_time = time.perf_counter()
         while True:
-            print("------------------------")
-            # current_time = time.perf_counter()
-            # print(f"Time since last step: {current_time - last_time:.3f} seconds")
-            # if current_time - last_time > 1.1 / frequency:
-            #     print("Warning: Control loop is running slower than the target frequency!")
-            # if current_time - last_time < 0.9 / frequency:
-            #     print("Warning: Control loop is running faster than the target frequency!")
-            # last_time = current_time
+            current_time = time.perf_counter()
+            elapsed_time = current_time - last_time
+            if elapsed_time < 0.9 / frequency:
+                print(f"Warning: Control loop is running slower than expected ({elapsed_time:.3f} seconds per iteration)")
+            elif elapsed_time > 1.1 / frequency:
+                print(f"Warning: Control loop is running faster than expected ({elapsed_time:.3f} seconds per iteration)")
+            last_time = time.perf_counter()
 
-            lin_vel, ang_vel = get_command_from_controller(spine_observation)
-            command = [lin_vel, 0.0, ang_vel]
-            # print(f"Command: lin_vel={lin_vel:.2f} m/s, ang_vel={ang_vel:.2f} rad/s")
+            # Activate agent when A button is pressed
+            if (not agent_is_running) and spine_observation["joystick"]["cross_button"]:
+                agent_is_running = True
+                print("Starting RL agent.", flush=True)
 
-            print("Spine observation: ", spine_observation)
+            # Deactivate agent when X button is pressed
+            if agent_is_running and spine_observation["joystick"]["square_button"]:
+                agent_is_running = False
+                print("Stopping RL agent.", flush=True)
 
-            for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
-                print(f"  {joint} position: {spine_observation["servo"][joint]["position"]:.2f}")
-            for wheel in ["left_wheel", "right_wheel"]:
-                print(f"  {wheel} velocity: {spine_observation["servo"][wheel]["velocity"]:.2f}")
-
-            for wheel in ["left_wheel", "right_wheel"]:
-                print(f"  {wheel} q_current: {spine_observation["servo"][wheel]["q_current"]:.2f}")
-
-            observation = get_inputs(last_action, command, spine_observation)
-            action = ort_sess.run(None, observation)[0][0]
-            last_action = action.tolist()
-
-            action = [0, 0, 0, 0, lin_vel, lin_vel] # for testing purposes
             action_dict = {
-                "left_hip": create_servo_target(position=action[0], max_torque=16.0),
-                "left_knee": create_servo_target(position=action[1], max_torque=16.0),
-                "right_hip": create_servo_target(position=action[2], max_torque=16.0),
-                "right_knee": create_servo_target(position=action[3], max_torque=16.0),
-                "left_wheel": create_servo_target(velocity=action[4], max_torque=1.7),
-                "right_wheel": create_servo_target(velocity=action[5], max_torque=1.7),
+                "left_hip": create_servo_target(position=0, max_torque=16.0),
+                "left_knee": create_servo_target(position=0, max_torque=16.0),
+                "right_hip": create_servo_target(position=0, max_torque=16.0),
+                "right_knee": create_servo_target(position=0, max_torque=16.0),
+                "left_wheel": create_servo_target(velocity=0, max_torque=1.7),
+                "right_wheel": create_servo_target(velocity=0, max_torque=1.7),
             }
+
+            if agent_is_running:
+                # Smooth command to avoid bang-bang behavior
+                lin_vel, ang_vel = get_command_from_controller(spine_observation)
+                command = [
+                    last_command[0] + min(abs(lin_vel - last_command[0]), command_max_change) * np.sign(lin_vel - last_command[0]),
+                    0.0,
+                    last_command[2] + min(abs(ang_vel - last_command[2]), command_max_change) * np.sign(ang_vel - last_command[2]),
+                ]
+                last_command = command
+                
+                observation = get_inputs(last_action, command, spine_observation, frequency)
+                action = ort_sess.run(None, observation)[0][0]
+                last_action = action.tolist()
+
+                action_dict = {
+                    "left_hip": create_servo_target(position=-action[0], max_torque=16.0),
+                    "left_knee": create_servo_target(position=action[1], max_torque=16.0),
+                    "right_hip": create_servo_target(position=-action[2], max_torque=16.0),
+                    "right_knee": create_servo_target(position=action[3], max_torque=16.0),
+                    "left_wheel": create_servo_target(velocity=action[4] * wheel_action_scale, max_torque=1.7),
+                    "right_wheel": create_servo_target(velocity=action[5] * wheel_action_scale, max_torque=1.7),
+                }
             
             for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
                 action_dict[joint]["kp_scale"] = 8.0 * 2 * np.pi / qdd100["kp"]
                 action_dict[joint]["kd_scale"] = 0.1 * 2 * np.pi / qdd100["kd"]
-
-
 
             _, _, terminated, truncated, info = env.step(action_dict)
             spine_observation = info["spine_observation"]
