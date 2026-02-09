@@ -28,8 +28,8 @@ Spines pull sensor measurements directly from host devices and files. This page 
 | `joystick.right_axis` | Right analog joystick position (x, y) |
 | `joystick.right_button` | Right button (R1 on PS4, R on Xbox) |
 | `joystick.right_trigger` | Right trigger position |
-| `joystick.square_button` | Left button (square on PS4, Y on Xbox) |
-| `joystick.triangle_button` | Top button (triangle on PS4, X on Xbox) |
+| `joystick.square_button` | Left button (square on PS4, X on Xbox) |
+| `joystick.triangle_button` | Top button (triangle on PS4, Y on Xbox) |
 
 ## Keyboard
 
