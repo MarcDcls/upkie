@@ -1,6 +1,7 @@
 *.egg-info
 .pixi
 .vscode
+.venv
 __pycache__
 activate.sh
 bazel-*
@@ -9,6 +10,7 @@ dist/
 docs/html/
 env/
 environment.tar
+logs/**/*.json
 logs/**/*.0
 logs/**/*.csv
 logs/**/*.mpack
