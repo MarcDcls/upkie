@@ -61,7 +61,7 @@ exclude = [
     "logs/",
     "mpc_balancer/",
     "rl_policies/",
-    "delay_identification/",
+    "identification/",
     "spines/",
     "tools/",
     "upkie/cpp",
@@ -143,8 +143,8 @@ mpc-balancer = "python -m mpc_balancer"
 [tool.pixi.feature.rl-policies.tasks]
 rl-policies = "python -m rl_policies"
 
-[tool.pixi.feature.delay-identification.tasks]
-delay-identification = "python -m delay_identification"
+[tool.pixi.feature.identification.tasks]
+identification = "python -m identification"
 
 [tool.pixi.feature.pack.dependencies]
 gin-config = ">=0.5.0"
@@ -201,7 +201,7 @@ genesis = { features = ["genesis"], solve-group = "genesis" }
 lint = { features = ["lint"], solve-group = "default" }
 mpc-balancer = { features = ["mpc-balancer"], solve-group = "mpc-balancer" }
 rl-policies = { features = ["rl-policies"], solve-group = "rl-policies" }
-delay-identification = { features = ["delay-identification"], solve-group = "delay-identification" }
+identification = { features = ["identification"], solve-group = "identification" }
 pack = { features = ["pack"], solve-group = "default" }
 pybullet = { features = ["pybullet"], solve-group = "pybullet" }
 test-py310 = { features = ["py310", "test"], solve-group = "py310" }

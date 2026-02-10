@@ -101,7 +101,7 @@ upload: check_upkie_name build  ## upload built targets to the Raspberry Pi
 # REMOTE TARGETS
 # ==============
 
-run_mpc_balancer:  ### run agent
+run_mpc_balancer:  ### run mpc_balancer agent
 	@if [ -f ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh ]; then \
 		echo "Running the MPC balancer in the unpacked Python environment..."; \
 		. ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh && $(PYTHON) -m mpc_balancer; \
@@ -110,13 +110,22 @@ run_mpc_balancer:  ### run agent
 		$(PYTHON) -m mpc_balancer; \
 	fi
 
-run_rl_policies:  ### run agent
+run_rl_policies:  ### run RL agent
 	@if [ -f ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh ]; then \
 		echo "Running the RL policies in the unpacked Python environment..."; \
 		. ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh && $(PYTHON) -m rl_policies; \
 	else \
 		echo "Running the RL policies in the current Python environment..."; \
 		$(PYTHON) -m rl_policies; \
+	fi
+
+run_identification:  ### run identification
+	@if [ -f ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh ]; then \
+		echo "Running the identification in the unpacked Python environment..."; \
+		. ${MAMBA_ROOT_PREFIX}/envs/upkie/activate.sh && $(PYTHON) -m identification $(ARGS); \
+	else \
+		echo "Running the identification in the current Python environment..."; \
+		$(PYTHON) -m identification; \
 	fi
 
 run_mock_spine:  ### run the mock spine on the Raspberry Pi
