@@ -12,7 +12,7 @@ import upkie.envs
 from upkie.logging import logger
 from upkie.utils.raspi import configure_agent_process, on_raspi
 
-from rl_policies.utils import create_servo_target, get_inputs
+from rl_policies.utils import create_servo_target, get_inputs, QDD_100
 from identification.filter import IIRFilter
 
 
@@ -71,8 +71,8 @@ def run(
                 data["read"].append(float(observation["obs"][0][5]))
 
             for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
-                action_dict[joint]["kp_scale"] = 1.0
-                action_dict[joint]["kd_scale"] = 1.0
+                action_dict[joint]["kp_scale"] = 8.0 * 2 * np.pi / QDD_100["kp"]
+                action_dict[joint]["kd_scale"] = 0.1 * 2 * np.pi / QDD_100["kd"]
 
             _, _, terminated, truncated, info = env.step(action_dict)
             spine_observation = info["spine_observation"]
