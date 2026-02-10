@@ -29,8 +29,10 @@ classifiers = [
 dependencies = [
     "gymnasium >= 1.0.0",
     "loop-rate-limiters >= 1.2.0",
+    "matplotlib>=3.9.4",
     "msgpack >= 1.0.2",
     "numpy >= 1.24.3",
+    "pyqt5>=5.15.11",
     "pyyaml >=5.3.1",
     "scipy >= 1.10.0",
     "upkie_description >= 2.1.0",
@@ -59,6 +61,7 @@ exclude = [
     "logs/",
     "mpc_balancer/",
     "rl_policies/",
+    "delay_identification/",
     "spines/",
     "tools/",
     "upkie/cpp",
@@ -140,6 +143,9 @@ mpc-balancer = "python -m mpc_balancer"
 [tool.pixi.feature.rl-policies.tasks]
 rl-policies = "python -m rl_policies"
 
+[tool.pixi.feature.delay-identification.tasks]
+delay-identification = "python -m delay_identification"
+
 [tool.pixi.feature.pack.dependencies]
 gin-config = ">=0.5.0"
 meshcat-shapes = ">=0.3.0"
@@ -195,6 +201,7 @@ genesis = { features = ["genesis"], solve-group = "genesis" }
 lint = { features = ["lint"], solve-group = "default" }
 mpc-balancer = { features = ["mpc-balancer"], solve-group = "mpc-balancer" }
 rl-policies = { features = ["rl-policies"], solve-group = "rl-policies" }
+delay-identification = { features = ["delay-identification"], solve-group = "delay-identification" }
 pack = { features = ["pack"], solve-group = "default" }
 pybullet = { features = ["pybullet"], solve-group = "pybullet" }
 test-py310 = { features = ["py310", "test"], solve-group = "py310" }
