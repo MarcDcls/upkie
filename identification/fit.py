@@ -26,13 +26,17 @@ args = parser.parse_args()
 with open(args.path, "r") as f:
     data = json.load(f)
 
-    timestamps = np.array(data["timestamp"])
-    read = np.array(data["read"])
-    target = np.array(data["target"])
+    framerate = 50.0
+    quarter_period = args.period / 4.0
+    quarter_period_ts = int(quarter_period * framerate)
+
+    timestamps = np.array(data["timestamp"][quarter_period_ts:-quarter_period_ts]) - data["timestamp"][quarter_period_ts]
+    read = np.array(data["read"][quarter_period_ts:-quarter_period_ts])
+    target = np.array(data["target"][quarter_period_ts:-quarter_period_ts])
 
     # Sinus fitting
     popt, pcov = curve_fit(sine_model, timestamps, read, 
-                        p0=[args.period, args.amplitude, 0.0, 0.0],
+                        p0=[args.period, args.amplitude, np.pi/2, 0.0],
                         maxfev=5000)
 
     period, amplitude, phase, offset = popt
@@ -42,10 +46,17 @@ with open(args.path, "r") as f:
     print(f"Amplitude: {amplitude:.3f}")
     print(f"Phase: {phase:.3f} rad")
     print(f"Offset: {offset:.3f}")
+
+    # Measuring delay at 0 crossing
+    fitted_zero_crossings = np.where(np.diff(np.sign(fitted - offset)))[0]
+    target_zero_crossings = np.where(np.diff(np.sign(target)))[0]
+    delays = fitted_zero_crossings - target_zero_crossings
+    average_delay = np.mean(delays) / framerate
+    print(f"Average delay: {average_delay*1000:.1f} ms")
     
     plt.figure(figsize=(12, 6))
     plt.plot(timestamps, read, label="Read Value")
-    plt.plot(timestamps, fitted, label="Fitted Sinusoid", linestyle="--")
+    plt.plot(timestamps, fitted - offset, label="Fitted Sinusoid (without offset)", linestyle="--")
     plt.plot(timestamps, target, label="Target Value", linestyle=":")
     plt.xlabel("Time [s]")
     plt.ylabel("Value")
