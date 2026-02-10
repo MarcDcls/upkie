@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Marc Duclusaud
+
+
 import numpy as np
 import onnx
 import onnxruntime as ort
@@ -102,7 +109,11 @@ def get_inputs(last_action, command, spine_observation, frequency) -> dict:
         wheel_velocities = ((wheel_positions - last_wheel_positions) * frequency).tolist()
 
     last_wheel_positions = wheel_positions
-    obs.extend(wheel_velocities)
+    # obs.extend(wheel_velocities)
+    obs.extend([
+        spine_observation["servo"]["left_wheel"]["velocity"],
+        spine_observation["servo"]["right_wheel"]["velocity"]
+    ])
 
     # IMU readings (quaternion in (w, x, y, z) order)
     imu_quat = spine_observation["imu"]["orientation"]

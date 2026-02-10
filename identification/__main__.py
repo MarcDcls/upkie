@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2025 Marc Duclusaud
+# Copyright 2026 Marc Duclusaud
 
 import gymnasium as gym
 import numpy as np
@@ -30,12 +30,7 @@ def run(
     """
     upkie.envs.register()
 
-    data = {"timestamp": [], 
-            "target_pos": [], 
-            "read_pos": [], 
-            "target_vel": [], 
-            "read_vel": [],
-             }
+    data = {"timestamp": [], "target": [], "read": []}
 
     with gym.make("Upkie-Spine-Servos", frequency=frequency, max_gain_scale=100.0) as env:
         _, info = env.reset()
@@ -49,30 +44,30 @@ def run(
         while t < 12.0:
             t = time.perf_counter() - start_time
 
-            position = 0.0
-            velocity = 0.0
+            pos = 0.0
+            vel = 0.0
             if position:
-                position = np.sin(t * np.pi) * 0.3
+                pos = np.sin(t * np.pi) * 0.3
             elif velocity:
-                velocity = np.sin(t * np.pi / 2) * 6.0
+                vel = np.sin(t * np.pi / 2) * 6.0
 
             action_dict = {
                 "left_hip": create_servo_target(position=0.0, max_torque=16.0),
-                "left_knee": create_servo_target(position=position, max_torque=16.0),
+                "left_knee": create_servo_target(position=pos, max_torque=16.0),
                 "right_hip": create_servo_target(position=0.0, max_torque=16.0),
                 "right_knee": create_servo_target(position=0.0, max_torque=16.0),
                 "left_wheel": create_servo_target(velocity=0.0, max_torque=1.7),
-                "right_wheel": create_servo_target(velocity=velocity, max_torque=1.7),
+                "right_wheel": create_servo_target(velocity=vel, max_torque=1.7),
             }
 
             observation = get_inputs(last_action, command, spine_observation, frequency)
             
             data["timestamp"].append(t)
             if position:
-                data["target"].append(position)
+                data["target"].append(pos)
                 data["read"].append(float(observation["obs"][0][1]))
             if velocity:
-                data["target"].append(velocity)
+                data["target"].append(vel)
                 data["read"].append(float(observation["obs"][0][5]))
 
             for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
@@ -90,7 +85,7 @@ def run(
     if position or velocity:
         import json
 
-        filename = "position_trajectories.json" if position else "velocity_trajectories.json"
+        filename = "position_trajectory.json" if position else "velocity_trajectory.json"
         with open(filename, "w") as f:
             json.dump(data, f, indent=4)
 
@@ -108,6 +103,6 @@ if __name__ == "__main__":
         configure_agent_process()
 
     try:
-        run(servo=args.servo)
+        run(position=args.position, velocity=args.velocity)
     except KeyboardInterrupt:
         logger.info("Terminating in response to keyboard interrupt")

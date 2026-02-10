@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Marc Duclusaud
+
+
 class IIRFilter:
     def __init__(self, cutoff_hz, sampling_hz, initial_value=0.0):
         dt = 1.0 / sampling_hz
