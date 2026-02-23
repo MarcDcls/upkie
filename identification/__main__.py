@@ -22,7 +22,7 @@ def log_data(data, t, observation, action):
         "timestamp": t,
         "left_hip": {
             "read": float(observation["obs"][0][0]),
-            "target": float(action["left_hip"]["position"]),
+            "target": -float(action["left_hip"]["position"]),
         },
         "left_knee": {
             "read": float(observation["obs"][0][1]),
@@ -30,7 +30,7 @@ def log_data(data, t, observation, action):
         },
         "right_hip": {
             "read": float(observation["obs"][0][2]),
-            "target": float(action["right_hip"]["position"]),
+            "target": -float(action["right_hip"]["position"]),
         },
         "right_knee": {
             "read": float(observation["obs"][0][3]),
@@ -75,7 +75,6 @@ def run(
     traj = None
     if trajectory:
         traj = get_position_trajectory(6.0, frequency, hold_duration=1.0)
-        duration = 7.0
 
     data = []
     with gym.make("Upkie-Spine-Servos", frequency=frequency, max_gain_scale=100.0) as env:
@@ -98,9 +97,10 @@ def run(
             _, _, terminated, truncated, info = env.step(action_dict)
         spine_observation = info["spine_observation"]
         
+        i = 0
         t = 0
         start_time = time.perf_counter()
-        while t < duration:
+        while i < len(traj["left_hip"]) if trajectory else t < duration:
             t = time.perf_counter() - start_time
 
             action_dict = {
@@ -119,14 +119,15 @@ def run(
                 action_dict["right_wheel"]["velocity"] = np.sin(t * np.pi / 2) * 6.0
 
             if trajectory:
-                action_dict["left_hip"]["position"] = -traj["left_hip"][int(t * frequency)]
-                action_dict["left_knee"]["position"] = traj["left_knee"][int(t * frequency)]
-                action_dict["right_hip"]["position"] = -traj["right_hip"][int(t * frequency)]
-                action_dict["right_knee"]["position"] = traj["right_knee"][int(t * frequency)]
+                action_dict["left_hip"]["position"] = -traj["left_hip"][i]
+                action_dict["left_knee"]["position"] = traj["left_knee"][i]
+                action_dict["right_hip"]["position"] = -traj["right_hip"][i]
+                action_dict["right_knee"]["position"] = traj["right_knee"][i]
 
             observation = get_inputs(last_action, command, spine_observation, frequency)
             
             log_data(data, t, observation, action_dict)
+            i += 1
 
             for joint in ["left_hip", "left_knee", "right_hip", "right_knee"]:
                 action_dict[joint]["kp_scale"] = 8.0 * 2 * np.pi / QDD_100["kp"]
