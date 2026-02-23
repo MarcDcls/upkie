@@ -18,22 +18,35 @@ from identification.trajectory import get_position_trajectory
 
 
 def log_data(data, t, observation, action):
-    data["timestamp"].append(t)
+    entry = {
+        "timestamp": t,
+        "left_hip": {
+            "read": float(observation["obs"][0][0]),
+            "target": float(action["left_hip"]["position"]),
+        },
+        "left_knee": {
+            "read": float(observation["obs"][0][1]),
+            "target": float(action["left_knee"]["position"]),
+        },
+        "right_hip": {
+            "read": float(observation["obs"][0][2]),
+            "target": float(action["right_hip"]["position"]),
+        },
+        "right_knee": {
+            "read": float(observation["obs"][0][3]),
+            "target": float(action["right_knee"]["position"]),
+        },
+        "left_wheel": {
+            "read": float(observation["obs"][0][4]),
+            "target": float(action["left_wheel"]["velocity"]),
+        },
+        "right_wheel": {
+            "read": float(observation["obs"][0][5]),
+            "target": float(action["right_wheel"]["velocity"]),
+        },
+    }
+    data.append(entry)
     
-    data["left_hip_read"].append(float(observation["obs"][0][0]))
-    data["left_knee_read"].append(float(observation["obs"][0][1]))
-    data["right_hip_read"].append(float(observation["obs"][0][2]))
-    data["right_knee_read"].append(float(observation["obs"][0][3]))
-    data["left_wheel_read"].append(float(observation["obs"][0][4]))
-    data["right_wheel_read"].append(float(observation["obs"][0][5]))
-    
-    data["left_hip_target"].append(float(action["left_hip"]["position"]))
-    data["left_knee_target"].append(float(action["left_knee"]["position"]))
-    data["right_hip_target"].append(float(action["right_hip"]["position"]))
-    data["right_knee_target"].append(float(action["right_knee"]["position"]))
-    data["left_wheel_target"].append(float(action["left_wheel"]["velocity"]))
-    data["right_wheel_target"].append(float(action["right_wheel"]["velocity"]))
-
 
 def interpolate(start, end, t, duration):
     if t >= duration:
@@ -57,22 +70,6 @@ def run(
     """
     upkie.envs.register()
 
-    data = {
-        "timestamp": [],
-        "left_hip_read": [],
-        "left_knee_read": [],
-        "right_hip_read": [],
-        "right_knee_read": [],
-        "left_wheel_read": [],
-        "right_wheel_read": [],
-        "left_hip_target": [],
-        "left_knee_target": [],
-        "right_hip_target": [],
-        "right_knee_target": [],
-        "left_wheel_target": [],
-        "right_wheel_target": [],
-    }
-
     duration = 12.0
 
     traj = None
@@ -80,6 +77,7 @@ def run(
         traj = get_position_trajectory(6.0, frequency, hold_duration=1.0)
         duration = 7.0
 
+    data = []
     with gym.make("Upkie-Spine-Servos", frequency=frequency, max_gain_scale=100.0) as env:
         _, info = env.reset()
         spine_observation = info["spine_observation"]
