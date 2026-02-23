@@ -4,12 +4,12 @@ import random
 
 def get_position_trajectory(duration: float, 
                             framerate: float, 
-                            max_angle: float = 1.5,
+                            max_angle: float = 1.2,
                             nb_sinusoids: int = 3,
                             min_amplitude: float = 0.1, 
                             max_amplitude: float = 1.0, 
                             min_frequency: float = 0.1, 
-                            max_frequency: float = 2.0, 
+                            max_frequency: float = 1.0, 
                             hold_duration: float = 0.0) -> np.ndarray:
     """
     Generate a random trajectory for the position-controlled joints.
@@ -25,7 +25,7 @@ def get_position_trajectory(duration: float,
     nb_ts = int(duration * framerate)
     for joint in actions:
         params = []
-        for _ in range(3):
+        for _ in range(nb_sinusoids):
             frequency = random.uniform(min_frequency, max_frequency)
             amplitude = random.uniform(min_amplitude, max_amplitude)
             params.append((frequency, amplitude))

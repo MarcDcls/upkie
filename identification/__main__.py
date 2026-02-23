@@ -35,6 +35,13 @@ def log_data(data, t, observation, action):
     data["right_wheel_target"].append(float(action["right_wheel"]["velocity"]))
 
 
+def interpolate(start, end, t, duration):
+    if t >= duration:
+        return end
+    alpha = t / duration
+    return start + alpha * (end - start)
+
+
 def run(
     frequency: float = 50.0,
     position: bool = False,
@@ -81,17 +88,17 @@ def run(
         command = [0.0] * 3
 
         # Going to zero position before starting the trajectory
-        for t in range(int(2.0 * frequency)):
+        for i in range(int(2.0 * frequency)):
             action_dict = {
-                "left_hip": create_servo_target(position=0.0, max_torque=16.0),
-                "left_knee": create_servo_target(position=0.0, max_torque=16.0),
-                "right_hip": create_servo_target(position=0.0, max_torque=16.0),
-                "right_knee": create_servo_target(position=0.0, max_torque=16.0),
+                "left_hip": create_servo_target(position=interpolate(spine_observation["servo"]["left_hip"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "left_knee": create_servo_target(position=interpolate(spine_observation["servo"]["left_knee"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "right_hip": create_servo_target(position=interpolate(spine_observation["servo"]["right_hip"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "right_knee": create_servo_target(position=interpolate(spine_observation["servo"]["right_knee"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
                 "left_wheel": create_servo_target(velocity=0.0, max_torque=1.7),
                 "right_wheel": create_servo_target(velocity=0.0, max_torque=1.7),
             }
             _, _, terminated, truncated, info = env.step(action_dict)
-            spine_observation = info["spine_observation"]
+        spine_observation = info["spine_observation"]
         
         t = 0
         start_time = time.perf_counter()
@@ -133,6 +140,18 @@ def run(
             if terminated or truncated:
                 _, info = env.reset()
                 spine_observation = info["spine_observation"]
+            
+        # Going back to zero smoothly at the end of the trajectory
+        for i in range(int(2.0 * frequency)):
+            action_dict = {
+                "left_hip": create_servo_target(position=interpolate(spine_observation["servo"]["left_hip"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "left_knee": create_servo_target(position=interpolate(spine_observation["servo"]["left_knee"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "right_hip": create_servo_target(position=interpolate(spine_observation["servo"]["right_hip"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "right_knee": create_servo_target(position=interpolate(spine_observation["servo"]["right_knee"]["position"], 0.0, i, 2.0 * frequency), max_torque=16.0),
+                "left_wheel": create_servo_target(velocity=0.0, max_torque=1.7),
+                "right_wheel": create_servo_target(velocity=0.0, max_torque=1.7),
+            }
+            _, _, terminated, truncated, info = env.step(action_dict)
     
     # Save data
     if position or velocity or trajectory:
@@ -160,6 +179,11 @@ if __name__ == "__main__":
         configure_agent_process()
 
     try:
-        run(position=args.position, velocity=args.velocity, trajectory=args.trajectory)
+        count = 1
+        while True:
+            print(f"Running identification cycle {count}")
+            run(position=args.position, velocity=args.velocity, trajectory=args.trajectory)
+            time.sleep(3.0)
+            count += 1
     except KeyboardInterrupt:
         logger.info("Terminating in response to keyboard interrupt")
